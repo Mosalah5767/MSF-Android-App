@@ -27,6 +27,7 @@ jobs:
       - name: Create Android project
         run: |
           mkdir -p app/src/main/java/com/msf/sales
+
           cat > settings.gradle <<'EOF'
           pluginManagement {
               repositories {
@@ -45,27 +46,32 @@ jobs:
           rootProject.name = "MSFSalesAssistant"
           include ':app'
           EOF
+
           cat > build.gradle <<'EOF'
           plugins {
               id 'com.android.application' version '8.7.3' apply false
           }
           EOF
+
           cat > app/build.gradle <<'EOF'
           plugins {
               id 'com.android.application'
           }
+
           android {
               namespace 'com.msf.sales'
               compileSdk 35
+
               defaultConfig {
                   applicationId 'com.msf.sales'
                   minSdk 23
                   targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
+                  versionCode 2
+                  versionName '1.1'
               }
           }
           EOF
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application
@@ -82,6 +88,7 @@ jobs:
               </application>
           </manifest>
           EOF
+
           cat > app/src/main/java/com/msf/sales/MainActivity.java <<'EOF'
           package com.msf.sales;
 
@@ -96,6 +103,7 @@ jobs:
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
                   LinearLayout layout = new LinearLayout(this);
                   layout.setOrientation(LinearLayout.VERTICAL);
                   layout.setGravity(Gravity.CENTER);
@@ -122,9 +130,21 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
       - name: Build debug APK
         run: gradle assembleDebug
+
+      - name: Verify APK
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
+          APK_SIZE=$(stat -c%s app/build/outputs/apk/debug/app-debug.apk)
+          if [ "$APK_SIZE" -lt 100000 ]; then
+            echo "APK is unexpectedly small: $APK_SIZE bytes"
+            exit 1
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

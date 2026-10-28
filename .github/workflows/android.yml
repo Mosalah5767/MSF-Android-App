@@ -62,6 +62,23 @@ jobs:
             apkanalyzer apk summary "$APK"
           fi
 
+      - name: Inspect APK package details
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          echo "=== APK file size ==="
+          ls -lh "$APK"
+          echo "=== APK package contents ==="
+          unzip -l "$APK" | grep -E 'classes.*dex|AndroidManifest.xml|assets/index.html'
+          echo "=== Android package metadata ==="
+          AAPT="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          if [ -n "$AAPT" ] && [ -x "$AAPT" ]; then
+            "$AAPT" dump badging "$APK" | head -n 20
+          else
+            echo "aapt not found; package metadata check skipped"
+          fi
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

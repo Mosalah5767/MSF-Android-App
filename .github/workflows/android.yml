@@ -33,10 +33,8 @@ jobs:
           test -n "$ZIP_FILE"
           mkdir -p /tmp/mof-project
           unzip -oq "$ZIP_FILE" -d /tmp/mof-project
-
           PROJECT_DIR="$(find /tmp/mof-project -type f -name settings.gradle -printf '%h\n' | head -n 1)"
           test -n "$PROJECT_DIR"
-
           cp -a "$PROJECT_DIR"/. .
           test -f app/build.gradle
           test -f app/src/main/AndroidManifest.xml
@@ -48,7 +46,7 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
+      - name: Build Debug APK
         run: gradle --no-daemon assembleDebug
 
       - name: Verify APK
@@ -58,9 +56,6 @@ jobs:
           test -s "$APK"
           ls -lh "$APK"
           unzip -t "$APK"
-          if command -v apkanalyzer >/dev/null 2>&1; then
-            apkanalyzer apk summary "$APK"
-          fi
 
       - name: Inspect APK package details
         shell: bash
@@ -71,7 +66,6 @@ jobs:
           ls -lh "$APK"
           echo "=== APK package contents ==="
           unzip -l "$APK" | grep -E 'classes.*dex|AndroidManifest.xml|assets/index.html'
-          echo "=== Android package metadata ==="
           AAPT="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           if [ -n "$AAPT" ] && [ -x "$AAPT" ]; then
             "$AAPT" dump badging "$APK" | head -n 20

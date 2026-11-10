@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "12556992933",
+    "project_id": "mof-sales-assistant",
+    "storage_bucket": "mof-sales-assistant.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:12556992933:android:871a251ebc7bfe26cba84c",
+        "android_client_info": {
+          "package_name": "com.msf.sales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjZqRPz2qRPyG3eXEQ2tWeMgzFQNTc_eE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

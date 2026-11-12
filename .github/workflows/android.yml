@@ -57,6 +57,17 @@ jobs:
             find "$d" -type f | sort
             echo "===== BUILD FILES ====="
             find "$d" -name build.gradle -o -name settings.gradle | while read f; do echo "--- $f"; cat "$f"; done
+            echo "===== HTML AUTH/SYNC HOOKS ====="
+            grep -nEi 'mofAuthResult|mofSyncResult|mofCloudData|MoFAndroid|signIn|sync|restore' "$d/app/src/main/assets/index.html" || true
+            echo "===== FIREBASE README ====="
+            cat "$d/README-FIREBASE-AR.txt" 2>/dev/null || true
+            echo "===== GOOGLE CONFIG SUMMARY ====="
+            python3 - "$d/app/google-services.json" <<'PY'
+import json,sys
+try:
+ d=json.load(open(sys.argv[1])); c=d.get("client",[{}])[0]; print("project_id:",d.get("project_info",{}).get("project_id")); print("package:",c.get("client_info",{}).get("android_client_info",{}).get("package_name")); print("oauth_client_count:",len(c.get("oauth_client",[]))); print("web_client_ids:",[x.get("client_id") for x in c.get("oauth_client",[]) if x.get("client_type")==3])
+except Exception as e: print("config_error:",e)
+PY
             echo "===== FIREBASE / AUTH CODE ====="
             grep -RniE 'FirebaseAuth|FirebaseFirestore|FirebaseDatabase|GoogleSignIn|google-services|firebase' "$d" --exclude='*.png' || true
             echo "===== MAIN ACTIVITY ====="

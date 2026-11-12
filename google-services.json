@@ -12,7 +12,20 @@
           "package_name": "com.msf.sales"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "12556992933-929139f5gvbjl40b14i9i7nukejj8s32.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.msf.sales",
+            "certificate_hash": "28b29ef6d36a6e193128f69c7568884d3035a33d"
+          }
+        },
+        {
+          "client_id": "12556992933-6omaf1gj6h2jjs8d58da49aeo85lhpoe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBjZqRPz2qRPyG3eXEQ2tWeMgzFQNTc_eE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "12556992933-6omaf1gj6h2jjs8d58da49aeo85lhpoe.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

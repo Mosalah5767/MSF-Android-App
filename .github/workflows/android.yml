@@ -214,6 +214,14 @@ jobs:
             find "$d" -name MainActivity.java | while read f; do cat "$f"; done
           done
 
+      - name: Verify patched app handlers
+        shell: bash
+        run: |
+          echo "===== PRODUCT FORM / SAVE ====="
+          grep -nEi 'form|save|submit|toast|resetForm|showPage|resizeImage|function load|function persist' app/src/main/assets/index.html | tail -n 45
+          echo "===== NATIVE GOOGLE AUTH ====="
+          grep -nEi 'signIn\(|onActivityResult|GOOGLE_SIGN_IN|default_web_client_id' app/src/main/java/com/msf/sales/MainActivity.java
+
       - name: Restore stable debug signing key
         uses: actions/cache@v4
         with:

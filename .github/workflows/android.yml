@@ -45,6 +45,24 @@ jobs:
           test -f app/src/main/AndroidManifest.xml
           test -f app/src/main/assets/index.html
 
+      - name: Inspect both project archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          for z in MoF-Android-Project-Google-Sync.zip MoF-Storage-Fix-Ready-Updated.zip; do
+            d="/tmp/inspect-$RANDOM"
+            mkdir -p "$d"
+            unzip -oq "$z" -d "$d"
+            echo "===== ARCHIVE $z ====="
+            find "$d" -type f | sort
+            echo "===== BUILD FILES ====="
+            find "$d" -name build.gradle -o -name settings.gradle | while read f; do echo "--- $f"; cat "$f"; done
+            echo "===== FIREBASE / AUTH CODE ====="
+            grep -RniE 'FirebaseAuth|FirebaseFirestore|FirebaseDatabase|GoogleSignIn|google-services|firebase' "$d" --exclude='*.png' || true
+            echo "===== MAIN ACTIVITY ====="
+            find "$d" -name MainActivity.java -exec cat {} \\\;
+          done
+
       - name: Create debug signing key
         run: |
           mkdir -p "$HOME/.config/.android"

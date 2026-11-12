@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE="./MoF-Storage-Fix-Ready-Updated.zip"
+          ZIP_FILE="./MoF-Android-Project-Google-Sync.zip"
           test -n "$ZIP_FILE"
           mkdir -p /tmp/mof-project
           unzip -oq "$ZIP_FILE" -d /tmp/mof-project

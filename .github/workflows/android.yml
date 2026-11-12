@@ -7,6 +7,7 @@ on:
     paths:
       - '*.zip'
       - '.github/workflows/android.yml'
+      - 'google-services.json'
 
 permissions:
   contents: read
@@ -44,6 +45,22 @@ jobs:
           test -f app/build.gradle
           test -f app/src/main/AndroidManifest.xml
           test -f app/src/main/assets/index.html
+          test -f google-services.json
+          mkdir -p app
+          cp -f google-services.json app/google-services.json
+          python3 - <<'PY'
+          import json
+          with open("app/google-services.json", encoding="utf-8") as f:
+              data = json.load(f)
+          clients = data.get("client", [])
+          assert any(
+              c.get("client_info", {}).get("android_client_info", {}).get("package_name") == "com.msf.sales"
+              and any(o.get("client_type") == 1 and o.get("android_info", {}).get("certificate_hash", "").lower() == "28b29ef6d36a6e193128f69c7568884d3035a33d" for o in c.get("oauth_client", []))
+              and any(o.get("client_type") == 3 for o in c.get("oauth_client", []))
+              for c in clients
+          ), "Firebase OAuth clients or signing certificate do not match this APK"
+          print("Firebase config verified for com.msf.sales and the stable signing certificate.")
+          PY
           printf 'android.useAndroidX=true\nandroid.enableJetifier=true\n' > gradle.properties
 
       - name: Inspect both project archives

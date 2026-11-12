@@ -60,7 +60,7 @@ jobs:
             echo "===== FIREBASE / AUTH CODE ====="
             grep -RniE 'FirebaseAuth|FirebaseFirestore|FirebaseDatabase|GoogleSignIn|google-services|firebase' "$d" --exclude='*.png' || true
             echo "===== MAIN ACTIVITY ====="
-            find "$d" -name MainActivity.java -exec cat {} \\\;
+            find "$d" -name MainActivity.java | while read f; do cat "$f"; done
           done
 
       - name: Create debug signing key

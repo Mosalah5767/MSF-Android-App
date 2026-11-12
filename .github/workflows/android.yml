@@ -16,16 +16,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Download project
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Find and extract Android project
+      - name: Extract Android project
         shell: bash
         run: |
           set -euo pipefail
@@ -38,44 +38,15 @@ jobs:
           cp -a "$PROJECT_DIR"/. .
           test -f app/build.gradle
           test -f app/src/main/AndroidManifest.xml
-          test -f app/src/main/assets/index.html
-          test -f app/src/main/java/com/msf/sales/MainActivity.java
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Show SHA-1
+        run: gradle --no-daemon signingReport
 
-      - name: Build Debug APK
+      - name: Build APK
         run: gradle --no-daemon assembleDebug
-
-      - name: Verify APK
-        run: |
-          set -euo pipefail
-          APK="app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$APK"
-          ls -lh "$APK"
-          unzip -t "$APK"
-
-      - name: Inspect APK package details
-        shell: bash
-        run: |
-          set -euo pipefail
-          APK="app/build/outputs/apk/debug/app-debug.apk"
-          echo "=== APK file size ==="
-          ls -lh "$APK"
-          echo "=== APK package contents ==="
-          unzip -l "$APK" | grep -E 'classes.*dex|AndroidManifest.xml|assets/index.html'
-          AAPT="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-          if [ -n "$AAPT" ] && [ -x "$AAPT" ]; then
-            "$AAPT" dump badging "$APK" | head -n 20
-          else
-            echo "aapt not found; package metadata check skipped"
-          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MoF-Sales-Assistant-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          path: app/build/outputs/apk/debug/*.apk

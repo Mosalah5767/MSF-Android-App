@@ -63,6 +63,85 @@ jobs:
           PY
           printf 'android.useAndroidX=true\nandroid.enableJetifier=true\n' > gradle.properties
 
+      - name: Fix reliable product saving and Google account feedback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          java = Path("app/src/main/java/com/msf/sales/MainActivity.java")
+          html = Path("app/src/main/assets/index.html")
+          j = java.read_text(encoding="utf-8")
+          h = html.read_text(encoding="utf-8")
+
+          def replace_once(source, old, new, label):
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one {label}, found {count}")
+              return source.replace(old, new, 1)
+
+          j = replace_once(j, "import android.content.Intent;", "import android.content.Intent;\nimport android.content.SharedPreferences;", "Intent import")
+          if "import com.google.android.gms.common.api.ApiException;" not in j:
+              j = j.replace("import com.google.android.gms.auth.api.signin.GoogleSignInOptions;", "import com.google.android.gms.auth.api.signin.GoogleSignInOptions;\nimport com.google.android.gms.common.api.ApiException;")
+          j = replace_once(j, "    private FirebaseFirestore db;", "    private FirebaseFirestore db;\n    private SharedPreferences localPrefs;", "Firebase fields")
+          j = replace_once(j, "        auth = FirebaseAuth.getInstance(); db = FirebaseFirestore.getInstance();", "        auth = FirebaseAuth.getInstance(); db = FirebaseFirestore.getInstance();\n        localPrefs = getSharedPreferences(\"mof_local_data\", MODE_PRIVATE);", "Firebase initialization")
+          j = replace_once(j, "        webView.setWebViewClient(new WebViewClient());", """        webView.setWebViewClient(new WebViewClient() {
+                      @Override public void onPageFinished(WebView view, String url) {
+                          super.onPageFinished(view, url);
+                          if (auth.getCurrentUser() != null && auth.getCurrentUser().getEmail() != null) {
+                              message("mofAuthResult", "الحساب المرتبط: " + auth.getCurrentUser().getEmail());
+                          }
+                      }
+                  });""", "WebViewClient")
+          j = replace_once(j, "    private class AppBridge {\n", """    private class AppBridge {
+                  @JavascriptInterface public boolean saveLocal(String json) {
+                      if (json == null || json.length() > 8_000_000) return false;
+                      return localPrefs.edit().putString("products_json", json).commit();
+                  }
+                  @JavascriptInterface public String loadLocal() {
+                      return localPrefs.getString("products_json", "");
+                  }
+          """, "AppBridge start")
+          old_result = """        if(requestCode==GOOGLE_SIGN_IN){try{String token=GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class).getIdToken();auth.signInWithCredential(GoogleAuthProvider.getCredential(token,null)).addOnSuccessListener(a->{message("mofAuthResult","تم تسجيل الدخول: "+a.getUser().getEmail());new AppBridge().restore();}).addOnFailureListener(e->message("mofAuthResult","فشل تسجيل الدخول: "+e.getMessage()));}catch(Exception e){message("mofAuthResult","لم يكتمل تسجيل الدخول: "+e.getMessage());}}"""
+          new_result = """        if (requestCode == GOOGLE_SIGN_IN) {
+                      if (resultCode != RESULT_OK || data == null) {
+                          message("mofAuthResult", "لم يكتمل اختيار حساب Google. حاول مرة أخرى.");
+                          return;
+                      }
+                      try {
+                          String token = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class).getIdToken();
+                          if (token == null || token.isEmpty()) {
+                              message("mofAuthResult", "لم يصل رمز التحقق من Google. تحقق من إعداد OAuth.");
+                              return;
+                          }
+                          auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null))
+                              .addOnSuccessListener(a -> {
+                                  String email = a.getUser() != null ? a.getUser().getEmail() : "";
+                                  message("mofAuthResult", "تم ربط حساب Google بنجاح: " + email);
+                                  new AppBridge().restore();
+                              })
+                              .addOnFailureListener(e -> message("mofAuthResult", "فشل ربط حساب Google: " + e.getMessage()));
+                      } catch (ApiException e) {
+                          message("mofAuthResult", "تعذر إكمال تسجيل Google (رمز " + e.getStatusCode() + "): " + e.getMessage());
+                      } catch (Exception e) {
+                          message("mofAuthResult", "تعذر إكمال تسجيل Google: " + e.getMessage());
+                      }
+                  }"""
+          j = replace_once(j, old_result, new_result, "Google sign-in result handler")
+
+          old_load = "function load(){try{products=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(products))products=[]}catch(e){products=[];document.getElementById('storageStatus').textContent='تعذر قراءة التخزين المحلي؛ صدّر نسخة احتياطية إذا كانت متاحة.'}renderProducts()}"
+          new_load = """function load(){try{let raw='';if(window.MoFAndroid&&window.MoFAndroid.loadLocal)raw=window.MoFAndroid.loadLocal()||'';if(!raw)raw=localStorage.getItem(KEY)||'[]';products=JSON.parse(raw);if(!Array.isArray(products))products=[];if(window.MoFAndroid&&window.MoFAndroid.saveLocal&&products.length)window.MoFAndroid.saveLocal(JSON.stringify(products))}catch(e){try{products=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(products))products=[]}catch(x){products=[];document.getElementById('storageStatus').textContent='تعذر قراءة التخزين؛ لم يتم حذف البيانات.'}}renderProducts()}"""
+          h = replace_once(h, old_load, new_load, "product load function")
+          old_persist = "function persist(){try{localStorage.setItem(KEY,JSON.stringify(products));if(window.MoFAndroid&&window.MoFAndroid.account())window.MoFAndroid.sync(JSON.stringify(products));return true}catch(e){toast('تعذر الحفظ: مساحة التخزين قد تكون ممتلئة. قلّل حجم الصور وصدّر نسخة احتياطية.');return false}}"
+          new_persist = """function persist(){let json;try{json=JSON.stringify(products)}catch(e){toast('تعذر تجهيز بيانات المنتج للحفظ');return false}let nativeSaved=false;try{if(window.MoFAndroid&&window.MoFAndroid.saveLocal)nativeSaved=window.MoFAndroid.saveLocal(json)===true}catch(e){}let browserSaved=false;try{localStorage.setItem(KEY,json);browserSaved=true}catch(e){}if(!nativeSaved&&!browserSaved){toast('تعذر الحفظ في مساحة الجهاز. حرّر مساحة ثم حاول مجدداً.');return false}try{if(window.MoFAndroid&&window.MoFAndroid.account())window.MoFAndroid.sync(json)}catch(e){}return true}"""
+          h = replace_once(h, old_persist, new_persist, "product persist function")
+          old_auth = "window.mofAuthResult=function(msg){document.getElementById('googleStatus').textContent=msg;toast(msg);};"
+          new_auth = """window.mofAuthResult=function(msg){let s=document.getElementById('googleStatus');if(s)s.textContent=msg;let b=document.querySelector('[onclick="googleLogin()"]');if(b){if(msg.includes('تم ربط حساب Google')||msg.includes('الحساب المرتبط:')){b.textContent='تم الربط ✓';b.classList.add('gold')}else if(msg.includes('فشل')||msg.includes('تعذر')||msg.includes('لم يكتمل')){b.textContent='إعادة المحاولة';}}toast(msg);};"""
+          h = replace_once(h, old_auth, new_auth, "Google status callback")
+          java.write_text(j, encoding="utf-8")
+          html.write_text(h, encoding="utf-8")
+          print("Applied native persistent storage fallback and visible Google sign-in status.")
+          PY
       - name: Inspect both project archives
         shell: bash
         run: |

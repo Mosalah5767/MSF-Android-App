@@ -63,6 +63,12 @@ jobs:
             find "$d" -name MainActivity.java | while read f; do cat "$f"; done
           done
 
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.config/.android/debug.keystore
+          key: mof-debug-signing-key-v1
+
       - name: Create debug signing key
         run: |
           mkdir -p "$HOME/.config/.android"

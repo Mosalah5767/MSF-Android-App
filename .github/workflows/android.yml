@@ -80,6 +80,16 @@ jobs:
                   raise SystemExit(f"Expected one {label}, found {count}")
               return source.replace(old, new, 1)
 
+          # Remove the obsolete viewer script: its missing viewerImage element threw
+          # before the product form and authentication handlers could be registered.
+          viewer_start = "let viewerScale=1,viewerX=0,viewerY=0,viewerPointers=new Map()"
+          viewer_end = "function esc(s)"
+          start = h.find(viewer_start)
+          end = h.find(viewer_end, start + 1) if start >= 0 else -1
+          if start < 0 or end < 0:
+              raise SystemExit("Cannot locate obsolete photo viewer block safely")
+          h = h[:start] + h[end:]
+
           j = replace_once(j, "import android.content.Intent;", "import android.content.Intent;\nimport android.content.SharedPreferences;", "Intent import")
           if "import com.google.android.gms.common.api.ApiException;" not in j:
               j = j.replace("import com.google.android.gms.auth.api.signin.GoogleSignInOptions;", "import com.google.android.gms.auth.api.signin.GoogleSignInOptions;\nimport com.google.android.gms.common.api.ApiException;")

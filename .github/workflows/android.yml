@@ -163,7 +163,7 @@ jobs:
           """
           if "</style>" not in h:
               raise SystemExit("Cannot find HTML style closing tag for image zoom")
-          h = h.replace("</style>", zoom_css + "\\n</style>", 1)
+          h = h.replace("</style>", zoom_css + "\n</style>", 1)
 
           zoom_js = """
           (function(){
@@ -195,7 +195,7 @@ jobs:
           if "</script>" not in h:
               raise SystemExit("Cannot find HTML script closing tag for image zoom")
           pos = h.rfind("</script>")
-          h = h[:pos] + zoom_js + "\\n" + h[pos:]
+          h = h[:pos] + zoom_js + "\n" + h[pos:]
           java.write_text(j, encoding="utf-8")
 
           html.write_text(h, encoding="utf-8")
@@ -231,6 +231,14 @@ jobs:
           nl -ba app/src/main/assets/index.html | sed -n '34,75p'
           echo "===== NATIVE GOOGLE AUTH ====="
           grep -nEi 'signIn\(|onActivityResult|GOOGLE_SIGN_IN|default_web_client_id' app/src/main/java/com/msf/sales/MainActivity.java
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.S)
+          Path("/tmp/mof-inline.js").write_text("\\n".join(scripts), encoding="utf-8")
+          PY
+          node --check /tmp/mof-inline.js
 
       - name: Restore stable debug signing key
         uses: actions/cache@v4
